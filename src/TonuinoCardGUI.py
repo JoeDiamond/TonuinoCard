@@ -3,6 +3,9 @@ import tkinter as tk
 from tkinter import ttk
 import pathlib
 import eyed3
+import re
+
+
 def listOfmp3s(folder: pathlib.Path):
     return list(pathlib.Path(folder).glob("*\\*.mp3"))
 
@@ -11,6 +14,8 @@ class Application(tk.Frame):
     def __init__(self, master=None):
         super().__init__(master)
         self.master = master
+        self.master.geometry("1280x1024")
+        # self.master.height = 1024
         self.pack()
         self.create_widgets()
 
@@ -55,20 +60,25 @@ class Application(tk.Frame):
         self.quit.grid(row=2)
 
     def updateFolderTree(self, event):
-        #listFiles = listOfmp3s(pathlib.Path(self.sdcardfolder.get()))
+        # Delete all old items
+        self.sdcardtree.delete(*self.sdcardtree.get_children())
 
-        #root_node = self.sdcardtree.insert(
-        #    '', 'end', text=self.sdcardfolder.get(), open=True)
-        
-        # Call the recursive function
+        # Go through all directories
         self.process_directory('', self.sdcardfolder.get())
 
+        self.sdcardtree.tag_configure('wrongfolderorfile', background='orange')
+        self.sdcardtree.tag_configure('wrongfileandfolder', background='red')
+        self.sdcardtree.tag_configure('rightfolder', background='green')
+
+    # Iterate recursively through all direcoties and update the treeview
     def process_directory(self, parent, path):
         for p in os.listdir(path):
             abspath = os.path.join(path, p)
             isdir = os.path.isdir(abspath)
             oid = self.sdcardtree.insert(parent, 'end', text=p, open=False)
-            
+            if re.match("^([0-9]{3})",path) is not None:
+                self.sdcardtree.item(oid, tags=("rightfolder",))
+
             if isdir:
                 self.process_directory(oid, abspath)
             elif os.path.isfile(abspath):
