@@ -4,6 +4,7 @@ from tkinter import ttk
 import pathlib
 import eyed3
 import re
+from PIL import ImageTk, Image
 
 
 def listOfmp3s(folder: pathlib.Path):
@@ -101,19 +102,29 @@ class Application(tk.Frame):
             abspath = os.path.join(path, p)
             isdir = os.path.isdir(abspath)
             oid = self.sdcardtree.insert(parent, 'end', text=p, open=False)
+
+            # Check if it matches the general naming scheme and flag it okay
             if (re.match("^([0-9]{3})",p) is not None) or p is "advert":
                 print(path)
                 self.sdcardtree.item(oid, tags=("ok",))
 
+            # Call recursive if it's a dir
             if isdir:
                 self.process_directory(oid, abspath)
-            elif os.path.isfile(abspath):
+                continue
+            
+            # Seems to be a file
+            if os.path.isfile(abspath):
+                # But is it an mp3?
                 if os.path.splitext(abspath)[1] == ".mp3":
                     print(abspath)
                     mp3file = eyed3.load(abspath)
                     print(mp3file.tag.title)
                     self.sdcardtree.item(oid,values = mp3file.tag.title)
-                    if mp3file.tag.title is not None:
+
+                    if mp3file.tag.images is not None:
+                        self.sdcardtree.item(oid
+                                             , image=ImageTk.PhotoImage(data=mp3file.tag.images[0].image_data))
                         pass
                 # Get the mp3-tag info
 
