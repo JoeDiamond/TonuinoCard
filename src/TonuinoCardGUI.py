@@ -14,13 +14,37 @@ class Application(tk.Frame):
     def __init__(self, master=None):
         super().__init__(master)
         self.master = master
-        self.master.geometry("1280x1024")
-        # self.master.height = 1024
-        self.pack()
+        self.master.grid_rowconfigure(0, weight=1)
+        self.master.grid_columnconfigure(0, weight=1)
+        self.master.geometry("1280x900")
+        self.grid(row=0, column=0, sticky="nsew")
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_columnconfigure(1, weight=9)  # columns will split space
+
         self.create_widgets()
 
     def create_widgets(self):
-        self.hi_there = tk.Button(self)
+        # configure internal left Frame
+        self.left_frame = tk.Frame(self, borderwidth=2, relief=tk.SUNKEN)
+        self.left_frame.grid_rowconfigure(0, weight=1)  # rows will split space
+        self.left_frame.grid_rowconfigure(1, weight=1)  # rows will split space
+        self.left_frame.grid_columnconfigure(0, weight=1)
+        self.left_frame.grid(column=0, row=0, sticky='nsew')
+
+        # configure internal right Frame
+        self.right_frame = tk.Frame(self, borderwidth=2, relief=tk.SUNKEN)
+        self.right_frame.grid_rowconfigure(
+            0, weight=1)  # rows will split space
+        self.right_frame.grid_rowconfigure(
+            1, weight=8)  # rows will split space
+        self.right_frame.grid_rowconfigure(
+            2, weight=1)  # rows will split space
+        self.right_frame.grid_columnconfigure(0, weight=99)
+        self.right_frame.grid_columnconfigure(1, weight=1)
+        self.right_frame.grid(column=1, row=0, sticky='nsew')
+
+        self.hi_there = tk.Button(self.left_frame)
         self.hi_there["text"] = "Hello World\n(click me)"
         self.hi_there["command"] = self.updateFolderTree
         self.hi_there.grid(row=0)
@@ -30,20 +54,22 @@ class Application(tk.Frame):
         # set it to some value
         self.sdcardfolder.set("C:\\Users\\Joe\\Music")
 
-        self.sdcardtree = tk.ttk.Treeview(self, columns=("#0", "#1", "#2"), show="tree")
+        self.sdcardtree = tk.ttk.Treeview(self.right_frame,columns=("#0", "#1", "#2"), show="tree")
         self.sdcardtree.column("#0", width=100)
         self.sdcardtree.column("#1", width=100)
-        self.ysb = ttk.Scrollbar(self, orient='vertical', command=self.sdcardtree.yview)
-        self.xsb = ttk.Scrollbar(self, orient='horizontal', command=self.sdcardtree.xview)
+        self.ysb = ttk.Scrollbar(
+            self.right_frame, orient='vertical', command=self.sdcardtree.yview)
+        self.xsb = ttk.Scrollbar(
+            self.right_frame, orient='horizontal', command=self.sdcardtree.xview)
         self.sdcardtree.configure(yscroll=self.ysb.set, xscroll=self.xsb.set)
-        self.sdcardtree.grid(row=1,column=1)
-        self.ysb.grid(row=1, column=2, sticky='ns')
-        self.xsb.grid(row=2, column=1, sticky='ew')
+        self.sdcardtree.grid(row=1, column=0, sticky='nsew')
+        self.ysb.grid(row=1, column=1, sticky='nsw')
+        self.xsb.grid(row=2, column=0, sticky='new')
         #self.sdcardtree.heading('#0', text=self.sdcardfolder.get(), anchor='w')
 
         #self.sdcardtree.pack()
-        self.sdcardfolderEntry = tk.Entry(self)
-        self.sdcardfolderEntry.grid(row=0,column=1)
+        self.sdcardfolderEntry = tk.Entry(self.right_frame)
+        self.sdcardfolderEntry.grid(row=0,column=0)
         #self.sdcardfolderEntry.pack()
  
         # tell the entry widget to watch this variable
@@ -66,9 +92,8 @@ class Application(tk.Frame):
         # Go through all directories
         self.process_directory('', self.sdcardfolder.get())
 
-        self.sdcardtree.tag_configure('wrongfolderorfile', background='orange')
-        self.sdcardtree.tag_configure('wrongfileandfolder', background='red')
-        self.sdcardtree.tag_configure('rightfolder', background='green')
+        self.sdcardtree.tag_configure('error', background='red')
+        self.sdcardtree.tag_configure('ok', background='green')
 
     # Iterate recursively through all direcoties and update the treeview
     def process_directory(self, parent, path):
@@ -76,8 +101,9 @@ class Application(tk.Frame):
             abspath = os.path.join(path, p)
             isdir = os.path.isdir(abspath)
             oid = self.sdcardtree.insert(parent, 'end', text=p, open=False)
-            if re.match("^([0-9]{3})",path) is not None:
-                self.sdcardtree.item(oid, tags=("rightfolder",))
+            if (re.match("^([0-9]{3})",p) is not None) or p is "advert":
+                print(path)
+                self.sdcardtree.item(oid, tags=("ok",))
 
             if isdir:
                 self.process_directory(oid, abspath)
