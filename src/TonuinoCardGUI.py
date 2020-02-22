@@ -5,7 +5,7 @@ import pathlib
 import eyed3
 import re
 from PIL import ImageTk, Image
-
+import io
 
 def listOfmp3s(folder: pathlib.Path):
     return list(pathlib.Path(folder).glob("*\\*.mp3"))
@@ -50,6 +50,10 @@ class Application(tk.Frame):
         self.hi_there["command"] = self.updateFolderTree
         self.hi_there.grid(row=0)
 
+        self.popup_menu = tk.Menu(self, tearoff=0)
+        self.popup_menu.add_command(label="Rename to scheme",
+                                    command=self.rename)
+
         # here is the application variable
         self.sdcardfolder = tk.StringVar()
         # set it to some value
@@ -58,12 +62,15 @@ class Application(tk.Frame):
         self.sdcardtree = tk.ttk.Treeview(self.right_frame,columns=("#0", "#1", "#2"), show="tree")
         self.sdcardtree.column("#0", width=100)
         self.sdcardtree.column("#1", width=100)
+        self.sdcardtree.bind("<Button-3>",self.OnRightMouseClick)
         self.ysb = ttk.Scrollbar(
             self.right_frame, orient='vertical', command=self.sdcardtree.yview)
         self.xsb = ttk.Scrollbar(
             self.right_frame, orient='horizontal', command=self.sdcardtree.xview)
         self.sdcardtree.configure(yscroll=self.ysb.set, xscroll=self.xsb.set)
         self.sdcardtree.grid(row=1, column=0, sticky='nsew')
+        self.style = ttk.Style()
+        self.style.configure("Treeview", rowheight=40)
         self.ysb.grid(row=1, column=1, sticky='nsw')
         self.xsb.grid(row=2, column=0, sticky='new')
         #self.sdcardtree.heading('#0', text=self.sdcardfolder.get(), anchor='w')
@@ -86,6 +93,19 @@ class Application(tk.Frame):
                               command=self.master.destroy)
         self.quit.grid(row=2)
 
+    def rename(self):
+        print("Renaming ", self.sdcardtree.item(self.curesel, "text"), " to scheme")
+        
+
+    def OnRightMouseClick(self, event):
+        self.curesel = self.sdcardtree.identify('item', event.x, event.y)
+        print("you clicked on", self.sdcardtree.item(self.curesel, "text"))
+        if "error" in self.sdcardtree.item(self.curesel, 'tags'):
+            try:
+                self.popup_menu.tk_popup(event.x_root, event.y_root, 0)
+            finally:
+                self.popup_menu.grab_release()
+
     def updateFolderTree(self, event):
         # Delete all old items
         self.sdcardtree.delete(*self.sdcardtree.get_children())
@@ -104,10 +124,11 @@ class Application(tk.Frame):
             oid = self.sdcardtree.insert(parent, 'end', text=p, open=False)
 
             # Check if it matches the general naming scheme and flag it okay
-            if (re.match("^([0-9]{3})",p) is not None) or p is "advert":
-                print(path)
+            if (re.match("^([0-9]{3})",p) is not None) or (p == "advert") or (p == "mp3"):
+                #print(path)
                 self.sdcardtree.item(oid, tags=("ok",))
-
+            else: 
+                self.sdcardtree.item(oid, tags=("error",))
             # Call recursive if it's a dir
             if isdir:
                 self.process_directory(oid, abspath)
@@ -117,19 +138,19 @@ class Application(tk.Frame):
             if os.path.isfile(abspath):
                 # But is it an mp3?
                 if os.path.splitext(abspath)[1] == ".mp3":
-                    print(abspath)
+                    #print(abspath)
                     mp3file = eyed3.load(abspath)
-                    print(mp3file.tag.title)
-                    self.sdcardtree.item(oid,values = mp3file.tag.title)
+                    #print(mp3file.tag.title)
+                    self.sdcardtree.item(oid,values = (mp3file.tag.title,mp3file.tag.album))
 
-                    if mp3file.tag.images is not None:
+                    if mp3file.tag.images is not None and len(mp3file.tag.images) > 0:
+                        self.image = Image.open(io.BytesIO(mp3file.tag.images[0].image_data))
+                        self.image = ImageTk.PhotoImage(
+                            self.image.resize((40, 40)))
                         self.sdcardtree.item(oid
-                                             , image=ImageTk.PhotoImage(data=mp3file.tag.images[0].image_data))
+                                             , image=self.image)
                         pass
                 # Get the mp3-tag info
-
-    def say_hi(self):
-        print("hi there, everyone!")
 
 if __name__ == "__main__":
     root = tk.Tk()
