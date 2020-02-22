@@ -95,7 +95,13 @@ class Application(tk.Frame):
 
     def rename(self):
         print("Renaming ", self.sdcardtree.item(self.curesel, "text"), " to scheme")
-        
+        tags = self.sdcardtree.item(self.curesel, "values")
+        mp3folder = pathlib.Path(tags[2]).parent
+        listOfMp3s = list(mp3folder.glob("[0-9]{3}.mp3"))
+        if len(listOfMp3s) < 1:
+            os.rename(tags[2], os.path.join(mp3folder, "000.mp3"))
+            self.updateFolderTree(None)
+            return
 
     def OnRightMouseClick(self, event):
         self.curesel = self.sdcardtree.identify('item', event.x, event.y)
@@ -126,9 +132,9 @@ class Application(tk.Frame):
             # Check if it matches the general naming scheme and flag it okay
             if (re.match("^([0-9]{3})",p) is not None) or (p == "advert") or (p == "mp3"):
                 #print(path)
-                self.sdcardtree.item(oid, tags=("ok",))
+                self.sdcardtree.item(oid, values = ("","",abspath), tags=("ok",))
             else: 
-                self.sdcardtree.item(oid, tags=("error",))
+                self.sdcardtree.item(oid, values=("", "", abspath),tags=("error",))
             # Call recursive if it's a dir
             if isdir:
                 self.process_directory(oid, abspath)
@@ -141,7 +147,7 @@ class Application(tk.Frame):
                     #print(abspath)
                     mp3file = eyed3.load(abspath)
                     #print(mp3file.tag.title)
-                    self.sdcardtree.item(oid,values = (mp3file.tag.title,mp3file.tag.album))
+                    self.sdcardtree.item(oid,values = (mp3file.tag.title,mp3file.tag.album,abspath))
 
                     if mp3file.tag.images is not None and len(mp3file.tag.images) > 0:
                         self.image = Image.open(io.BytesIO(mp3file.tag.images[0].image_data))
