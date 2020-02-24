@@ -50,10 +50,6 @@ class Application(tk.Frame):
         self.hi_there["command"] = self.updateFolderTree
         self.hi_there.grid(row=0)
 
-        self.popup_menu = tk.Menu(self, tearoff=0)
-        self.popup_menu.add_command(label="Rename to scheme",
-                                    command=self.rename)
-
         # here is the application variable
         self.sdcardfolder = tk.StringVar()
         # set it to some value
@@ -93,24 +89,61 @@ class Application(tk.Frame):
                               command=self.master.destroy)
         self.quit.grid(row=2)
 
-    def rename(self):
+    def renameFile(self):
         print("Renaming ", self.sdcardtree.item(self.curesel, "text"), " to scheme")
         tags = self.sdcardtree.item(self.curesel, "values")
-        mp3folder = pathlib.Path(tags[2]).parent
-        listOfMp3s = list(mp3folder.glob("[0-9]{3}.mp3"))
-        if len(listOfMp3s) < 1:
-            os.rename(tags[2], os.path.join(mp3folder, "000.mp3"))
-            self.updateFolderTree(None)
-            return
+        if os.path.isfile(tags[2]) and os.path.splitext(tags[2])[1] == ".mp3":
+            mp3folder = pathlib.Path(tags[2]).parent
+            listOfMp3s = list(mp3folder.glob("[0-9]{3}.mp3"))
+            if len(listOfMp3s) < 1:
+                os.rename(tags[2], os.path.join(mp3folder, "000.mp3"))
+                self.updateFolderTree(None)
+                return
+        else: print("User tried to rename a none-mp3")
+
+    def renameFolder2Scheme(self):
+        pass
+
+    def renameFolder2Mp3(self):
+        pass
+
+    def renameFolder2Advert(self):
+        pass
 
     def OnRightMouseClick(self, event):
         self.curesel = self.sdcardtree.identify('item', event.x, event.y)
         print("you clicked on", self.sdcardtree.item(self.curesel, "text"))
-        if "error" in self.sdcardtree.item(self.curesel, 'tags'):
-            try:
-                self.popup_menu.tk_popup(event.x_root, event.y_root, 0)
-            finally:
-                self.popup_menu.grab_release()
+        tags = self.sdcardtree.item(self.curesel, "values")
+        if os.path.isfile(tags[2]) and os.path.splitext(tags[2])[1] == ".mp3":
+            if "error" in self.sdcardtree.item(self.curesel, 'tags'):
+                try:
+                    self.popup_menu = tk.Menu(self, tearoff=0)
+                    self.popup_menu.add_command(label="Rename MP3 to scheme",
+                                    command=self.renameFile)
+                    self.popup_menu.tk_popup(event.x_root, event.y_root, 0)
+                finally:
+                    self.popup_menu.grab_release()
+                    self.popup_menu.delete("Rename MP3 to scheme")
+        elif os.path.isdir(tags[2]):
+            if "error" in self.sdcardtree.item(self.curesel, 'tags'):
+                try:
+                    self.popup_menu=tk.Menu(self, tearoff = 0)
+                    self.popup_menu.add_command(label = "Rename Folder to scheme",
+                                    command = self.renameFolder2Scheme)
+                    self.popup_menu.add_command(label = "Rename Folder to \"MP3\"",
+                                    command = self.renameFolder2Mp3)
+                    self.popup_menu.add_command(label = "Rename Folder to \"Advert\"",
+                                    command = self.renameFolder2Advert)
+                    self.popup_menu.tk_popup(
+                                    event.x_root, event.y_root, 0)
+                finally:
+                    self.popup_menu.grab_release()
+                    self.popup_menu.delete(
+                                    "Rename Folder to scheme")
+                    self.popup_menu.delete(
+                                    "Rename Folder to \"Mp3\"")
+                    self.popup_menu.delete(
+                                    "Rename Folder to \"Advert\"")
 
     def updateFolderTree(self, event):
         # Delete all old items
