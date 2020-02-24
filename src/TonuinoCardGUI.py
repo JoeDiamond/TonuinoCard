@@ -17,7 +17,7 @@ class Application(tk.Frame):
         self.master = master
         self.master.grid_rowconfigure(0, weight=1)
         self.master.grid_columnconfigure(0, weight=1)
-        self.master.geometry("1280x900")
+        self.master.geometry("1280x800")
         self.grid(row=0, column=0, sticky="nsew")
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
@@ -105,7 +105,7 @@ class Application(tk.Frame):
         pass
 
     def renameFolder2Mp3(self):
-        pass
+        tags = self.sdcardtree.item(self.curesel, "values")
 
     def renameFolder2Advert(self):
         pass
@@ -138,19 +138,16 @@ class Application(tk.Frame):
                                     event.x_root, event.y_root, 0)
                 finally:
                     self.popup_menu.grab_release()
-                    self.popup_menu.delete(
-                                    "Rename Folder to scheme")
-                    self.popup_menu.delete(
-                                    "Rename Folder to \"Mp3\"")
-                    self.popup_menu.delete(
-                                    "Rename Folder to \"Advert\"")
+                    self.popup_menu.delete(0)
+                    self.popup_menu.delete(1)
+                    self.popup_menu.delete(2)
 
     def updateFolderTree(self, event):
         # Delete all old items
         self.sdcardtree.delete(*self.sdcardtree.get_children())
 
         # Go through all directories
-        self.process_directory('', self.sdcardfolder.get())
+        self.process_directory('', pathlib.Path(self.sdcardfolder.get()))
 
         self.sdcardtree.tag_configure('error', background='red')
         self.sdcardtree.tag_configure('ok', background='green')
@@ -158,7 +155,8 @@ class Application(tk.Frame):
     # Iterate recursively through all direcoties and update the treeview
     def process_directory(self, parent, path):
         for p in os.listdir(path):
-            abspath = os.path.join(path, p)
+            abspath = pathlib.Path(path).resolve().joinpath(p)
+            print("Checking ",abspath)
             isdir = os.path.isdir(abspath)
             oid = self.sdcardtree.insert(parent, 'end', text=p, open=False)
 
@@ -179,8 +177,15 @@ class Application(tk.Frame):
                 if os.path.splitext(abspath)[1] == ".mp3":
                     #print(abspath)
                     mp3file = eyed3.load(abspath)
+
+                    if mp3file.tag is None:
+                        return
                     #print(mp3file.tag.title)
-                    self.sdcardtree.item(oid,values = (mp3file.tag.title,mp3file.tag.album,abspath))
+                    try:
+                        self.sdcardtree.item(oid,
+                        values = (mp3file.tag.title,mp3file.tag.album,abspath))
+                    except: 
+                        pass
 
                     if mp3file.tag.images is not None and len(mp3file.tag.images) > 0:
                         self.image = Image.open(io.BytesIO(mp3file.tag.images[0].image_data))
