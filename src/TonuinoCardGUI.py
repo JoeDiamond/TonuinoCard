@@ -71,6 +71,9 @@ class Application(tk.Frame):
         self.xsb.grid(row=2, column=0, sticky='new')
         #self.sdcardtree.heading('#0', text=self.sdcardfolder.get(), anchor='w')
 
+
+        self.popup_menu = tk.Menu(self, tearoff=0)
+
         #self.sdcardtree.pack()
         self.sdcardfolderEntry = tk.Entry(self.right_frame)
         self.sdcardfolderEntry.grid(row=0,column=0)
@@ -89,6 +92,7 @@ class Application(tk.Frame):
                               command=self.master.destroy)
         self.quit.grid(row=2)
 
+    # Rename the selected file from the popup menu to fit in to the scheme
     def renameFile(self):
         print("Renaming ", self.sdcardtree.item(self.curesel, "text"), " to scheme")
         tags = self.sdcardtree.item(self.curesel, "values")
@@ -99,10 +103,31 @@ class Application(tk.Frame):
                 os.rename(tags[2], os.path.join(mp3folder, "000.mp3"))
                 self.updateFolderTree(None)
                 return
+            else:
+                results = list(map(int, listOfMp3s))
+                results = max(results)
+                os.rename(tags[2], os.path.join(mp3folder, "{:03d}.mp3".format(results)))
+                self.updateFolderTree(None)
         else: print("User tried to rename a none-mp3")
 
+
     def renameFolder2Scheme(self):
-        pass
+        print("Renaming ", self.sdcardtree.item(
+            self.curesel, "text"), " to scheme")
+        tags = self.sdcardtree.item(self.curesel, "values")
+        if os.path.isdir(tags[2]):
+            parentDir = pathlib.Path(tags[2]).parent
+            listOfFolders = [f.path for f in os.scandir(parentDir) if f.is_dir()]
+            if len(listOfFolders) < 1:
+                os.rename(tags[2], os.path.join(parentDir, "00"))
+                self.updateFolderTree(None)
+                return
+            else:
+                results = list(map(int, listOfFolders))
+                results = max(results)
+                os.rename(tags[2], os.path.join(
+                    parentDir, "{:02d}.mp3".format(results)))
+                self.updateFolderTree(None)
 
     def renameFolder2Mp3(self):
         tags = self.sdcardtree.item(self.curesel, "values")
@@ -110,37 +135,42 @@ class Application(tk.Frame):
     def renameFolder2Advert(self):
         pass
 
+    def debugPrint(self):
+        print("Test")
+
     def OnRightMouseClick(self, event):
         self.curesel = self.sdcardtree.identify('item', event.x, event.y)
-        print("you clicked on", self.sdcardtree.item(self.curesel, "text"))
+        print("You clicked on", self.sdcardtree.item(self.curesel, "text"))
+        if "error" not in self.sdcardtree.item(self.curesel, 'tags'):
+            print("There is no renaming to be done here")
         tags = self.sdcardtree.item(self.curesel, "values")
         if os.path.isfile(tags[2]) and os.path.splitext(tags[2])[1] == ".mp3":
-            if "error" in self.sdcardtree.item(self.curesel, 'tags'):
-                try:
-                    self.popup_menu = tk.Menu(self, tearoff=0)
-                    self.popup_menu.add_command(label="Rename MP3 to scheme",
-                                    command=self.renameFile)
-                    self.popup_menu.tk_popup(event.x_root, event.y_root, 0)
-                finally:
-                    self.popup_menu.grab_release()
-                    self.popup_menu.delete("Rename MP3 to scheme")
+            try:
+                
+                self.popup_menu.add_command(label="Rename MP3 to scheme",
+                                command=self.renameFile)
+                self.popup_menu.tk_popup(event.x_root, event.y_root, 0)
+                print("User clicked on something")
+            finally:
+                self.popup_menu.grab_release()
+                self.popup_menu.delete("Rename MP3 to scheme")
         elif os.path.isdir(tags[2]):
-            if "error" in self.sdcardtree.item(self.curesel, 'tags'):
-                try:
-                    self.popup_menu=tk.Menu(self, tearoff = 0)
-                    self.popup_menu.add_command(label = "Rename Folder to scheme",
-                                    command = self.renameFolder2Scheme)
-                    self.popup_menu.add_command(label = "Rename Folder to \"MP3\"",
-                                    command = self.renameFolder2Mp3)
-                    self.popup_menu.add_command(label = "Rename Folder to \"Advert\"",
-                                    command = self.renameFolder2Advert)
-                    self.popup_menu.tk_popup(
-                                    event.x_root, event.y_root, 0)
-                finally:
-                    self.popup_menu.grab_release()
-                    self.popup_menu.delete(0)
-                    self.popup_menu.delete(1)
-                    self.popup_menu.delete(2)
+            
+            try:
+                self.popup_menu.add_command(label = "Folder to scheme",
+                                            command=print("Option A"))
+                self.popup_menu.add_command(label = "B",
+                                            command=print("Option B"))
+                self.popup_menu.add_command(label = "C",
+                                            command=print("Option C"))
+                self.popup_menu.tk_popup(
+                                event.x_root, event.y_root, 0)
+                print("User clicked on something")
+            finally:
+                self.popup_menu.grab_release()
+                self.popup_menu.delete("Folder to scheme")
+                self.popup_menu.delete("B")
+                self.popup_menu.delete("C")
 
     def updateFolderTree(self, event):
         # Delete all old items
@@ -178,7 +208,8 @@ class Application(tk.Frame):
                     #print(abspath)
                     mp3file = eyed3.load(abspath)
 
-                    if mp3file.tag is None:
+                    if mp3file is None or mp3file.tag is None:
+                        print("The file is not a real mp3-File. Please check content")
                         return
                     #print(mp3file.tag.title)
                     try:
